@@ -69,6 +69,9 @@ yarn-error.log
 # Local dev config
 config.local.ts
 
+# Rust static library (downloaded via CI from proxy-everything releases)
+ios/ProxyUI/libhttp_proxy.a
+
 # Yarn
 .yarn/*
 !.yarn/patches
