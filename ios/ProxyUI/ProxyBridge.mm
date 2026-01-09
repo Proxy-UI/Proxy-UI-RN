@@ -2,12 +2,21 @@
 #import "proxy_ffi.h"
 
 static ProxyBridge *sharedInstance = nil;
+static BOOL loggingInitialized = NO;
 
 static void logCallback(int level, const char *message) {
-    if (sharedInstance && message) {
+    if (message) {
         NSString *msg = [NSString stringWithUTF8String:message];
-        [sharedInstance sendEventWithName:@"ProxyLog"
-                                     body:@{@"level": @(level), @"message": msg}];
+        NSArray *levels = @[@"TRACE", @"DEBUG", @"INFO", @"WARN", @"ERROR"];
+        NSString *levelStr = level < 5 ? levels[level] : @"UNKNOWN";
+        NSLog(@"[Proxy][%@] %@", levelStr, msg);
+
+        if (sharedInstance) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [sharedInstance sendEventWithName:@"ProxyLog"
+                                             body:@{@"level": @(level), @"message": msg}];
+            });
+        }
     }
 }
 
@@ -21,11 +30,19 @@ RCT_EXPORT_MODULE();
 - (instancetype)init {
     if (self = [super init]) {
         sharedInstance = self;
-        proxy_set_log_callback(logCallback);
-        proxy_init_logging();
-        _handle = proxy_create();
     }
     return self;
+}
+
+- (void)ensureInitialized {
+    if (!loggingInitialized) {
+        loggingInitialized = YES;
+        proxy_set_log_callback(logCallback);
+        proxy_init_logging();
+    }
+    if (!_handle) {
+        _handle = proxy_create();
+    }
 }
 
 - (void)dealloc {
@@ -45,6 +62,11 @@ RCT_EXPORT_MODULE();
 RCT_EXPORT_METHOD(start:(NSString *)host port:(int)port localPort:(int)lPort
                   key:(NSString *)key autoProxy:(BOOL)autoProxyEnabled reverseGeo:(BOOL)rev
                   resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
+    [self ensureInitialized];
+    if (!_handle) {
+        resolve(@NO);
+        return;
+    }
     ProxyConfig config = {
         .server_host = [host UTF8String],
         .server_port = (uint16_t)port,
@@ -58,10 +80,18 @@ RCT_EXPORT_METHOD(start:(NSString *)host port:(int)port localPort:(int)lPort
 }
 
 RCT_EXPORT_METHOD(stop:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
+    if (!_handle) {
+        resolve(@NO);
+        return;
+    }
     resolve(@(proxy_stop(_handle) == PROXY_OK));
 }
 
 RCT_EXPORT_METHOD(isRunning:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
+    if (!_handle) {
+        resolve(@NO);
+        return;
+    }
     resolve(@(proxy_is_running(_handle) != 0));
 }
 

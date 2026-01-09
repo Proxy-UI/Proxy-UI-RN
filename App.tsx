@@ -15,14 +15,23 @@ import {
 } from 'react-native';
 import {useProxy, LogEntry} from './src/hooks/useProxy';
 
+// 尝试加载本地开发配置（可选）
+let DEV_CONFIG: {serverHost?: string; serverPort?: string; localPort?: string; sessionKey?: string} = {};
+try {
+  DEV_CONFIG = require('./config.local').DEV_CONFIG;
+} catch {
+  // config.local.ts 不存在，使用默认值
+}
+
+const LOG_LEVELS = ['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR'] as const;
+const LOG_COLORS = ['gray', 'blue', 'green', 'orange', 'red'];
+
 const LogItem = ({entry}: {entry: LogEntry}) => {
-  const colors = ['gray', 'blue', 'green', 'orange', 'red'];
-  const levels = ['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR'];
   return (
     <View style={styles.logItem}>
       <View style={styles.logHeader}>
-        <Text style={{color: colors[entry.level], fontWeight: 'bold'}}>
-          {levels[entry.level]}
+        <Text style={{color: LOG_COLORS[entry.level], fontWeight: 'bold'}}>
+          {LOG_LEVELS[entry.level]}
         </Text>
         <Text style={styles.logTime}>
           {entry.timestamp.toLocaleTimeString()}
@@ -33,17 +42,60 @@ const LogItem = ({entry}: {entry: LogEntry}) => {
   );
 };
 
+const LogFilter = ({
+  selected,
+  onSelect,
+}: {
+  selected: Set<number>;
+  onSelect: (level: number) => void;
+}) => (
+  <View style={styles.filterRow}>
+    {LOG_LEVELS.map((name, level) => (
+      <TouchableOpacity
+        key={level}
+        style={[
+          styles.filterChip,
+          selected.has(level) && {backgroundColor: LOG_COLORS[level]},
+        ]}
+        onPress={() => onSelect(level)}>
+        <Text
+          style={[
+            styles.filterChipText,
+            selected.has(level) && {color: 'white'},
+          ]}>
+          {name}
+        </Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+);
+
 export default function App() {
   const {isRunning, logs, start, stop, clearLogs} = useProxy();
-  const [serverHost, setServerHost] = useState('');
-  const [serverPort, setServerPort] = useState('1081');
-  const [localPort, setLocalPort] = useState('1080');
-  const [sessionKey, setSessionKey] = useState('');
+  const [serverHost, setServerHost] = useState(DEV_CONFIG.serverHost || '');
+  const [serverPort, setServerPort] = useState(DEV_CONFIG.serverPort || '1081');
+  const [localPort, setLocalPort] = useState(DEV_CONFIG.localPort || '1080');
+  const [sessionKey, setSessionKey] = useState(DEV_CONFIG.sessionKey || '');
   const [autoProxy, setAutoProxy] = useState(true);
   const [reverseGeo, setReverseGeo] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [status, setStatus] = useState('Proxy stopped');
+  const [logFilter, setLogFilter] = useState<Set<number>>(new Set([2, 3, 4])); // INFO, WARN, ERROR by default
+
+  const toggleLogFilter = (level: number) => {
+    setLogFilter(prev => {
+      const next = new Set(prev);
+      if (next.has(level)) {
+        next.delete(level);
+      } else {
+        next.add(level);
+      }
+      return next;
+    });
+  };
+
+  const filteredLogs = logs.filter(log => logFilter.has(log.level));
 
   const toggleProxy = async () => {
     if (isRunning) {
@@ -177,10 +229,10 @@ export default function App() {
           <TouchableOpacity
             style={[
               styles.button,
-              {backgroundColor: isRunning ? '#ff4444' : '#007AFF'},
+              isRunning ? styles.buttonStop : styles.buttonStart,
             ]}
             onPress={toggleProxy}>
-            <Text style={styles.buttonText}>
+            <Text style={[styles.buttonText, isRunning && styles.buttonTextStop]}>
               {isRunning ? 'Stop Proxy' : 'Start Proxy'}
             </Text>
           </TouchableOpacity>
@@ -205,19 +257,21 @@ export default function App() {
       <Modal visible={showLogs} animationType="slide">
         <SafeAreaView style={styles.modal}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={clearLogs}>
+            <TouchableOpacity style={styles.headerButton} onPress={clearLogs}>
               <Text style={styles.linkText}>Clear</Text>
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Logs</Text>
-            <TouchableOpacity onPress={() => setShowLogs(false)}>
+            <TouchableOpacity style={styles.headerButton} onPress={() => setShowLogs(false)}>
               <Text style={styles.linkText}>Done</Text>
             </TouchableOpacity>
           </View>
+          <LogFilter selected={logFilter} onSelect={toggleLogFilter} />
           <FlatList
-            data={[...logs].reverse()}
+            data={[...filteredLogs].reverse()}
             keyExtractor={item => item.id}
             renderItem={({item}) => <LogItem entry={item} />}
             style={styles.logList}
+            contentContainerStyle={styles.logListContent}
           />
         </SafeAreaView>
       </Modal>
@@ -305,12 +359,21 @@ const styles = StyleSheet.create({
   dot: {width: 12, height: 12, borderRadius: 6, marginRight: 8},
   button: {
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     marginHorizontal: 16,
     marginBottom: 16,
   },
+  buttonStart: {
+    backgroundColor: '#007AFF',
+  },
+  buttonStop: {
+    backgroundColor: '#fff0f0',
+    borderWidth: 1,
+    borderColor: '#ffcccc',
+  },
   buttonText: {color: 'white', fontWeight: '600', fontSize: 16},
+  buttonTextStop: {color: '#ff4444'},
   linkButton: {alignItems: 'center', padding: 12},
   linkText: {color: '#007AFF', fontSize: 16},
   modal: {flex: 1, backgroundColor: '#f5f5f5'},
@@ -325,22 +388,51 @@ const styles = StyleSheet.create({
   },
   modalTitle: {fontWeight: '600', fontSize: 17},
   placeholder: {width: 50},
+  headerButton: {
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
   logList: {flex: 1},
-  logItem: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderColor: '#eee',
+  logListContent: {padding: 16},
+  filterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 8,
     backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+  logItem: {
+    padding: 16,
+    marginBottom: 12,
+    backgroundColor: 'white',
+    borderRadius: 12,
   },
   logHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  logTime: {fontSize: 12, color: '#999'},
+  logTime: {fontSize: 13, color: '#999'},
   logMessage: {
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontSize: 12,
+    fontSize: 13,
+    color: '#333',
+    lineHeight: 20,
   },
   instructions: {
     padding: 16,
