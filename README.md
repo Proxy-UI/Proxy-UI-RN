@@ -1,72 +1,60 @@
 # Proxy UI
 
-React Native iOS proxy client with Rust FFI backend.
+iOS 代理客户端，支持加密传输和智能分流。
 
-## Features
+## 功能特性
 
-- HTTP/HTTPS proxy with AES-256-GCM encryption
-- Geo-based routing (Auto Proxy mode)
-- Real-time log viewer with level filtering
-- Shadowrocket integration support
+- AES-256-GCM 加密传输
+- 智能分流（Auto Proxy 模式）
+- 实时日志查看与过滤
+- 支持与 Shadowrocket 配合使用
 
-## Quick Start
+## 安装
 
-```bash
-# Install dependencies
-npm install
-cd ios && bundle install && bundle exec pod install && cd ..
+从 [Releases](https://github.com/Proxy-UI/Proxy-UI-RN/releases) 下载最新 IPA 文件，通过 AltStore 或其他方式安装。
 
-# Run
-npx react-native run-ios
-```
+## 使用方法
 
-## Xcode Setup
+### 基本配置
 
-Open `ios/ProxyUI.xcworkspace` and configure:
+1. 打开 Proxy UI
+2. 填写服务器信息：
+   - Server：服务器地址
+   - Server Port：服务器端口
+   - Local Port：本地监听端口（默认 7890）
+   - Session Key：32 位密钥
+3. 点击 Start Proxy
 
-1. Add files to project: `ProxyBridge.h`, `ProxyBridge.mm`, `proxy_ffi.h`, `libhttp_proxy.a`
-2. Link libraries: `libhttp_proxy.a`, `libresolv.tbd`
-3. Build Settings:
-   - Library Search Paths: `$(PROJECT_DIR)/ProxyUI`
-   - Other Linker Flags: `-lhttp_proxy`
-   - Header Search Paths: `$(PROJECT_DIR)/ProxyUI`
+### 代理模式
 
-## Architecture
+| 模式       | Auto Proxy | Reverse Geo | 说明                     |
+| ---------- | ---------- | ----------- | ------------------------ |
+| 全局代理   | OFF        | -           | 所有流量走代理           |
+| 正向代理   | ON         | OFF         | 国内直连，国外走代理     |
+| 反向代理   | ON         | ON          | 国外直连，国内走代理     |
 
-```
-React Native UI (App.tsx)
-       ↓
-useProxy Hook (State + Events)
-       ↓
-ProxyBridge.mm (Objective-C++ Native Module)
-       ↓
-libhttp_proxy.a (Rust FFI)
-```
+### 配合 Shadowrocket 使用
 
-## Usage with Shadowrocket
+单独使用 Proxy UI 只能代理 WiFi 流量。配合 Shadowrocket 可实现全局代理（WiFi + 蜂窝数据）。
 
-For global proxy (WiFi + Cellular), use with Shadowrocket:
+1. 启动 Proxy UI，**关闭 Auto Proxy**
+2. 导入 Shadowrocket 配置（见 `docs/shadowrocket.conf`）
+3. 连接 Shadowrocket
 
-1. Start Proxy UI with Auto Proxy **OFF**
-2. Import Shadowrocket config from `docs/shadowrocket.conf`
-3. Connect Shadowrocket
+详细教程：
+- [中文指南](docs/ios-user-guide-cn.md)
+- [English Guide](docs/ios-user-guide-en.md)
 
-See [docs/ios-user-guide-cn.md](docs/ios-user-guide-cn.md) or [docs/ios-user-guide-en.md](docs/ios-user-guide-en.md) for detailed setup.
+## 常见问题
 
-## Proxy Modes
+**Shadowrocket 显示 LocalProxy 超时**
+- 确保 Proxy UI 已启动且状态为绿色
+- 检查本地端口是否与 Shadowrocket 配置一致
 
-| Mode | Auto Proxy | Reverse Geo | Behavior |
-|------|------------|-------------|----------|
-| All Proxy | OFF | - | All traffic via proxy |
-| Forward | ON | OFF | CN direct, others proxy |
-| Reverse | ON | ON | CN proxy, others direct |
+**无法上网**
+- 确认服务器地址和密钥正确
+- 查看日志排查连接问题
 
-When using with Shadowrocket, keep Auto Proxy OFF (geo routing handled by Shadowrocket).
-
-## Troubleshooting
-
-**Linker errors**: Verify `libhttp_proxy.a` is linked and Library Search Paths is set.
-
-**DNS errors**: Add `libresolv.tbd` to Link Binary With Libraries.
-
-**LocalProxy timeout in Shadowrocket**: Ensure Proxy UI is running before connecting Shadowrocket.
+**为什么要关闭 Auto Proxy？**
+- 与 Shadowrocket 配合时，分流由 Shadowrocket 处理
+- 开启 Auto Proxy 会导致回环问题
