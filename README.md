@@ -1,60 +1,62 @@
 # Proxy UI
 
-iOS 代理客户端，支持加密传输和智能分流。
+[中文文档](README_CN.md)
 
-## 功能特性
+iOS proxy client with encrypted transmission and smart routing.
 
-- AES-256-GCM 加密传输
-- 智能分流（Auto Proxy 模式）
-- 实时日志查看与过滤
-- 支持与 Shadowrocket 配合使用
+## Features
 
-## 安装
+- AES-256-GCM encrypted transmission
+- Smart routing (Auto Proxy mode)
+- Real-time log viewer with filtering
+- Shadowrocket integration support
 
-从 [Releases](https://github.com/Proxy-UI/Proxy-UI-RN/releases) 下载最新 IPA 文件，通过 AltStore 或其他方式安装。
+## Installation
 
-## 使用方法
+Download the latest IPA from [Releases](https://github.com/Proxy-UI/Proxy-UI-RN/releases) and install via AltStore or similar tools.
 
-### 基本配置
+## Usage
 
-1. 打开 Proxy UI
-2. 填写服务器信息：
-   - Server：服务器地址
-   - Server Port：服务器端口
-   - Local Port：本地监听端口（默认 7890）
-   - Session Key：32 位密钥
-3. 点击 Start Proxy
+### Basic Setup
 
-### 代理模式
+1. Open Proxy UI
+2. Enter server info:
+   - Server: server address
+   - Server Port: server port
+   - Local Port: local listening port (default 7890)
+   - Session Key: 32-character key
+3. Tap Start Proxy
 
-| 模式       | Auto Proxy | Reverse Geo | 说明                     |
-| ---------- | ---------- | ----------- | ------------------------ |
-| 全局代理   | OFF        | -           | 所有流量走代理           |
-| 正向代理   | ON         | OFF         | 国内直连，国外走代理     |
-| 反向代理   | ON         | ON          | 国外直连，国内走代理     |
+### Proxy Modes
 
-### 配合 Shadowrocket 使用
+| Mode          | Auto Proxy | Reverse Geo | Description                    |
+| ------------- | ---------- | ----------- | ------------------------------ |
+| All Proxy     | OFF        | -           | All traffic via proxy          |
+| Forward Proxy | ON         | OFF         | CN direct, others via proxy    |
+| Reverse Proxy | ON         | ON          | Others direct, CN via proxy    |
 
-单独使用 Proxy UI 只能代理 WiFi 流量。配合 Shadowrocket 可实现全局代理（WiFi + 蜂窝数据）。
+### With Shadowrocket
 
-1. 启动 Proxy UI，**关闭 Auto Proxy**
-2. 导入 Shadowrocket 配置（见 `docs/shadowrocket.conf`）
-3. 连接 Shadowrocket
+Proxy UI alone only proxies WiFi traffic. Use with Shadowrocket for global proxy (WiFi + Cellular).
 
-详细教程：
+1. Start Proxy UI with **Auto Proxy OFF**
+2. Import Shadowrocket config (see `docs/shadowrocket.conf`)
+3. Connect Shadowrocket
+
+Detailed guides:
 - [中文指南](docs/ios-user-guide-cn.md)
 - [English Guide](docs/ios-user-guide-en.md)
 
-## 常见问题
+## FAQ
 
-**Shadowrocket 显示 LocalProxy 超时**
-- 确保 Proxy UI 已启动且状态为绿色
-- 检查本地端口是否与 Shadowrocket 配置一致
+**LocalProxy timeout in Shadowrocket**
+- Ensure Proxy UI is running (green status)
+- Check local port matches Shadowrocket config
 
-**无法上网**
-- 确认服务器地址和密钥正确
-- 查看日志排查连接问题
+**Cannot access internet**
+- Verify server address and key are correct
+- Check logs for connection issues
 
-**为什么要关闭 Auto Proxy？**
-- 与 Shadowrocket 配合时，分流由 Shadowrocket 处理
-- 开启 Auto Proxy 会导致回环问题
+**Why disable Auto Proxy?**
+- When using with Shadowrocket, routing is handled by Shadowrocket
+- Enabling Auto Proxy causes loop issues
