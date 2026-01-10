@@ -1,0 +1,82 @@
+name: Build iOS App
+
+on:
+  workflow_dispatch:
+    inputs:
+      lib_version:
+        description: 'Native library version (e.g., 0.4.10)'
+        required: true
+      release_tag:
+        description: 'Release tag (e.g., v1.0.0)'
+        required: false
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PRIVATE_REPO: acking-you/proxy-everything
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download native library
+        env:
+          GH_TOKEN: ${{ secrets.PRIVATE_REPO_PAT }}
+          LIB_VERSION: ${{ github.event.inputs.lib_version || '0.4.10' }}
+        run: |
+          gh release download "$LIB_VERSION" \
+            -R "$PRIVATE_REPO" \
+            -p "libhttp_proxy-${LIB_VERSION}-aarch64-apple-ios.tar.gz"
+          tar -xzf libhttp_proxy-*.tar.gz
+          mv libhttp_proxy-*/libhttp_proxy.a ios/ProxyUI/
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm install
+          cd ios && pod install
+
+      - name: Build iOS
+        run: |
+          xcodebuild -workspace ios/ProxyUI.xcworkspace \
+            -scheme ProxyUI \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath build/ProxyUI.xcarchive \
+            archive \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Create IPA
+        run: |
+          cd build/ProxyUI.xcarchive/Products/Applications
+          mkdir Payload
+          mv ProxyUI.app Payload/
+          zip -r proxy-ui-ios.ipa Payload/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: build/ProxyUI.xcarchive/Products/Applications/proxy-ui-ios.ipa
+
+  release:
+    needs: build-ios
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.release_tag != '' }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ios-ipa
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.release_tag }}
+          files: proxy-ui-ios.ipa
