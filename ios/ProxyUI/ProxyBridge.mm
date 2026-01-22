@@ -2,9 +2,41 @@
 #import "proxy_ffi.h"
 #import <string.h>
 #import <stdlib.h>
+#import <dlfcn.h>
 
 static ProxyBridge *sharedInstance = nil;
 static BOOL loggingInitialized = NO;
+static BOOL optionalSymbolsLoaded = NO;
+static BOOL hasAutoDirectApi = NO;
+
+typedef void (*ProxySetLogCallbackFn)(LogCallback callback);
+typedef void (*ProxyInitLoggingFn)(void);
+typedef void (*ProxyFreeStringFn)(char *s);
+typedef char *(*ProxyGetAutoDirectListFn)(void);
+typedef char *(*ProxyGetAutoDirectFailuresFn)(void);
+
+static ProxySetLogCallbackFn p_proxy_set_log_callback = NULL;
+static ProxyInitLoggingFn p_proxy_init_logging = NULL;
+static ProxyFreeStringFn p_proxy_free_string = NULL;
+static ProxyGetAutoDirectListFn p_proxy_get_auto_direct_list = NULL;
+static ProxyGetAutoDirectFailuresFn p_proxy_get_auto_direct_failures = NULL;
+
+static void loadOptionalSymbols(void) {
+    if (optionalSymbolsLoaded) {
+        return;
+    }
+    optionalSymbolsLoaded = YES;
+    void *handle = RTLD_DEFAULT;
+    p_proxy_set_log_callback = (ProxySetLogCallbackFn)dlsym(handle, "proxy_set_log_callback");
+    p_proxy_init_logging = (ProxyInitLoggingFn)dlsym(handle, "proxy_init_logging");
+    p_proxy_free_string = (ProxyFreeStringFn)dlsym(handle, "proxy_free_string");
+    p_proxy_get_auto_direct_list =
+        (ProxyGetAutoDirectListFn)dlsym(handle, "proxy_get_auto_direct_list");
+    p_proxy_get_auto_direct_failures =
+        (ProxyGetAutoDirectFailuresFn)dlsym(handle, "proxy_get_auto_direct_failures");
+    hasAutoDirectApi =
+        p_proxy_get_auto_direct_list && p_proxy_get_auto_direct_failures && p_proxy_free_string;
+}
 
 static void logCallback(int level, const char *message) {
     if (message) {
@@ -37,10 +69,15 @@ RCT_EXPORT_MODULE();
 }
 
 - (void)ensureInitialized {
+    loadOptionalSymbols();
     if (!loggingInitialized) {
         loggingInitialized = YES;
-        proxy_set_log_callback(logCallback);
-        proxy_init_logging();
+        if (p_proxy_set_log_callback) {
+            p_proxy_set_log_callback(logCallback);
+        }
+        if (p_proxy_init_logging) {
+            p_proxy_init_logging();
+        }
     }
     if (!_handle) {
         _handle = proxy_create();
@@ -81,6 +118,12 @@ RCT_EXPORT_METHOD(start:(NSString *)host port:(int)port localPort:(int)lPort
     const char *keyStr = (key.length == 32) ? strdup([key UTF8String]) : NULL;
     const char *directDomainsStr =
         (directDomains.length > 0) ? strdup([directDomains UTF8String]) : NULL;
+    if (!hasAutoDirectApi) {
+        if (directDomainsStr) {
+            free((void *)directDomainsStr);
+        }
+        directDomainsStr = NULL;
+    }
 
     ProxyConfig config = {
         .server_host = hostStr,
@@ -124,25 +167,33 @@ RCT_EXPORT_METHOD(isRunning:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromise
 
 RCT_EXPORT_METHOD(getAutoDirectList:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
     [self ensureInitialized];
-    char *result = proxy_get_auto_direct_list();
+    if (!p_proxy_get_auto_direct_list || !p_proxy_free_string) {
+        resolve(@"");
+        return;
+    }
+    char *result = p_proxy_get_auto_direct_list();
     if (!result) {
         resolve(@"");
         return;
     }
     NSString *json = [NSString stringWithUTF8String:result];
-    proxy_free_string(result);
+    p_proxy_free_string(result);
     resolve(json ? json : @"");
 }
 
 RCT_EXPORT_METHOD(getAutoDirectFailures:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
     [self ensureInitialized];
-    char *result = proxy_get_auto_direct_failures();
+    if (!p_proxy_get_auto_direct_failures || !p_proxy_free_string) {
+        resolve(@"");
+        return;
+    }
+    char *result = p_proxy_get_auto_direct_failures();
     if (!result) {
         resolve(@"");
         return;
     }
     NSString *json = [NSString stringWithUTF8String:result];
-    proxy_free_string(result);
+    p_proxy_free_string(result);
     resolve(json ? json : @"");
 }
 
