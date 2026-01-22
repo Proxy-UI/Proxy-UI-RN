@@ -30,5 +30,33 @@ target 'ProxyUI' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Work around glog placeholders not substituted on some installs.
+    glog_paths = [
+      installer.sandbox.root + "glog/src/glog/logging.h",
+      installer.sandbox.root + "glog/exported/glog/logging.h",
+    ]
+    glog_paths.each do |path|
+      next unless File.exist?(path)
+      contents = File.read(path)
+      next unless contents.include?("@ac_cv_have___builtin_expect@")
+      File.chmod(0o644, path) unless File.writable?(path)
+      File.write(path, contents.gsub("@ac_cv_have___builtin_expect@", "1"))
+    end
+
+    glog_utilities = installer.sandbox.root + "glog/src/utilities.cc"
+    if File.exist?(glog_utilities)
+      contents = File.read(glog_utilities)
+      unless contents.include?("TARGET_OS_IPHONE")
+        updated = contents.sub(
+          "pid_t GetTID() {\n  // On Linux and MacOSX, we try to use gettid().\n#if defined OS_LINUX || defined OS_MACOSX\n",
+          "pid_t GetTID() {\n#if defined(OS_MACOSX) && defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE\n  uint64_t tid = 0;\n  if (pthread_threadid_np(NULL, &tid) == 0) {\n    return (pid_t)tid;\n  }\n#endif\n  // On Linux and MacOSX, we try to use gettid().\n#if defined(OS_LINUX) || (defined(OS_MACOSX) && (!defined(TARGET_OS_IPHONE) || !TARGET_OS_IPHONE))\n"
+        )
+        if updated != contents
+          File.chmod(0o644, glog_utilities) unless File.writable?(glog_utilities)
+          File.write(glog_utilities, updated)
+        end
+      end
+    end
   end
 end

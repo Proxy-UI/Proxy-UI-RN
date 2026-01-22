@@ -15,6 +15,8 @@
 		CEB9EA642F114A76003FF611 /* ProxyBridge.mm in Sources */ = {isa = PBXBuildFile; fileRef = CEB9EA632F114A76003FF611 /* ProxyBridge.mm */; };
 		CEB9EA652F114A76003FF611 /* libhttp_proxy.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CEB9EA602F114A76003FF611 /* libhttp_proxy.a */; };
 		CEB9EA672F114AB0003FF611 /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = CEB9EA662F114AB0003FF611 /* libresolv.tbd */; };
+		CEBF326F2F20D1C20088344E /* Pods-ProxyUI.release.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 5709B34CF0A7D63546082F79 /* Pods-ProxyUI.release.xcconfig */; };
+		CEBF32702F20D1C80088344E /* Pods-ProxyUI.debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 3B4392A12AC88292D35C810B /* Pods-ProxyUI.debug.xcconfig */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -177,7 +179,9 @@
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
+				CEBF326F2F20D1C20088344E /* Pods-ProxyUI.release.xcconfig in Resources */,
 				7F7463197C21D40A3B0F4091 /* PrivacyInfo.xcprivacy in Resources */,
+				CEBF32702F20D1C80088344E /* Pods-ProxyUI.debug.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -208,13 +212,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-ProxyUI/Pods-ProxyUI-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-ProxyUI/Pods-ProxyUI-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -251,13 +251,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-ProxyUI/Pods-ProxyUI-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-ProxyUI/Pods-ProxyUI-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -374,6 +370,7 @@
 					"@executable_path/Frameworks",
 				);
 				LIBRARY_SEARCH_PATHS = (
+					"$(SDKROOT)/usr/lib/swift",
 					"$(inherited)",
 					"$(PROJECT_DIR)",
 					"$(PROJECT_DIR)/ProxyUI",
@@ -385,7 +382,7 @@
 					"-lc++",
 					"-lhttp_proxy",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.Jye10032.ProxyUI";
+				PRODUCT_BUNDLE_IDENTIFIER = com.Jye10032.ProxyUI;
 				PRODUCT_NAME = ProxyUI;
 				SWIFT_OBJC_BRIDGING_HEADER = "ProxyUI-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -488,6 +485,7 @@
 					"@executable_path/Frameworks",
 				);
 				LIBRARY_SEARCH_PATHS = (
+					"$(SDKROOT)/usr/lib/swift",
 					"$(inherited)",
 					"$(PROJECT_DIR)",
 					"$(PROJECT_DIR)/ProxyUI",
@@ -499,7 +497,7 @@
 					"-lc++",
 					"-lhttp_proxy",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.Jye10032.ProxyUI";
+				PRODUCT_BUNDLE_IDENTIFIER = com.Jye10032.ProxyUI;
 				PRODUCT_NAME = ProxyUI;
 				SWIFT_OBJC_BRIDGING_HEADER = "ProxyUI-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;

@@ -11,6 +11,7 @@ on:
         required: false
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
     branches: [main]
 
@@ -51,25 +52,27 @@ jobs:
             -sdk iphoneos \
             -archivePath build/ProxyUI.xcarchive \
             archive \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
 
       - name: Create IPA
         run: |
           cd build/ProxyUI.xcarchive/Products/Applications
           mkdir Payload
-          mv ProxyUI.app Payload/
-          zip -r proxy-ui-ios.ipa Payload/
+          cp -R ProxyUI.app Payload/
+          zip -r proxy-ui-ios-unsigned.ipa Payload/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
-          path: build/ProxyUI.xcarchive/Products/Applications/proxy-ui-ios.ipa
+          path: build/ProxyUI.xcarchive/Products/Applications/proxy-ui-ios-unsigned.ipa
 
   release:
     needs: build-ios
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.release_tag != '' }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag != '') || startsWith(github.ref, 'refs/tags/') }}
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -78,5 +81,5 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.event.inputs.release_tag }}
-          files: proxy-ui-ios.ipa
+          tag_name: ${{ github.event.inputs.release_tag || github.ref_name }}
+          files: proxy-ui-ios-unsigned.ipa
