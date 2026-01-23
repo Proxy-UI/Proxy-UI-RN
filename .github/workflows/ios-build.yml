@@ -18,6 +18,9 @@ on:
 env:
   PRIVATE_REPO: acking-you/proxy-everything
 
+permissions:
+  contents: write
+
 jobs:
   build-ios:
     runs-on: macos-latest
